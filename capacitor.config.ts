@@ -5,11 +5,6 @@ const config: CapacitorConfig = {
   appName: 'F.E.C Admin Suite',
   webDir: 'www',
 
-  server: {
-    url: 'https://flexisystems2000.github.io/F.E.CAdminpanel/',
-    cleartext: false
-  },
-
   android: {
     backgroundColor: '#ffffff'
   }
