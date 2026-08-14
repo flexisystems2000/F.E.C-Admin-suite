@@ -6,6 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'www',
 
   server: {
+    url: 'https://flexisystems2000.github.io/F.E.CAdminpanel/',
+    cleartext: false,
     allowNavigation: [
       'flexisystems2000.github.io'
     ]
