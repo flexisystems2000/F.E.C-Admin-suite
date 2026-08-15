@@ -28,6 +28,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
             
+      
       - name: Configure Android back button
         run: |
           python3 - <<'PY'
@@ -40,25 +41,25 @@ jobs:
           path.write_text("""package com.flexisystems.fecadmin;
 
           import android.os.Bundle;
+          import android.webkit.WebView;
+
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
+
               @Override
               public void onBackPressed() {
-                  if (getBridge() != null && getBridge().getWebView() != null) {
-                      if (getBridge().getWebView().canGoBack()) {
-                          getBridge().getWebView().goBack();
-                      } else {
-                          super.onBackPressed();
-                      }
+                  WebView webView = getBridge().getWebView();
+
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
                   } else {
-                      super.onBackPressed();
+                      finish();
                   }
               }
           }
           """)
           PY
-          
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
