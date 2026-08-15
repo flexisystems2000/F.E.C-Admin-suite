@@ -38,7 +38,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      # 7. Configure simple MainActivity
+      # 7. Configure MainActivity (with improved Back button)
       - name: Configure MainActivity
         run: |
           mkdir -p android/app/src/main/java/com/flexisystems/fecadmin
@@ -54,6 +54,9 @@ jobs:
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
+
+              private static final String HOME_URL =
+                      "https://flexisystems2000.github.io/F.E.CAdminpanel/";
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
@@ -79,15 +82,21 @@ jobs:
                                   if (currentWebView != null &&
                                       currentWebView.canGoBack()) {
 
+                                      // Normal case: go back in history
                                       currentWebView.goBack();
+
+                                  } else if (currentWebView != null) {
+
+                                      // No history left → load Admin Panel home
+                                      // (fixes Back doing nothing on offline screen)
+                                      currentWebView.loadUrl(HOME_URL);
 
                                   } else {
 
+                                      // Absolute fallback
                                       setEnabled(false);
-
                                       getOnBackPressedDispatcher()
                                               .onBackPressed();
-
                                       setEnabled(true);
                                   }
                               }
@@ -96,7 +105,7 @@ jobs:
               }
           }
           EOF
-          
+
       # 8. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
