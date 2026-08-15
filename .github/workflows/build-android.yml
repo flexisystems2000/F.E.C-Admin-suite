@@ -11,275 +11,91 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # 1. Get the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Install Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      # 3. Install project dependencies
       - name: Install dependencies
         run: npm install
 
+      # 4. Add Android platform
       - name: Add Android platform
         run: npx cap add android
 
+      # 5. Generate app icon and splash screen
       - name: Generate Android icons and splash screen
         run: npx capacitor-assets generate --android
-     
+
+      # 6. Sync Capacitor
       - name: Sync Capacitor
         run: npx cap sync android
-            
-      - name: Configure Android MainActivity
+
+      # 7. Configure simple MainActivity
+      - name: Configure MainActivity
         run: |
           mkdir -p android/app/src/main/java/com/flexisystems/fecadmin
 
           cat > android/app/src/main/java/com/flexisystems/fecadmin/MainActivity.java <<'EOF'
           package com.flexisystems.fecadmin;
 
-          import android.graphics.Color;
-          import android.net.ConnectivityManager;
-          import android.net.Network;
           import android.os.Bundle;
-          import android.os.Handler;
-          import android.os.Looper;
-          import android.view.View;
-          import android.view.Window;
           import android.webkit.WebView;
 
           import com.getcapacitor.BridgeActivity;
 
-          import java.net.HttpURLConnection;
-          import java.net.URL;
-
           public class MainActivity extends BridgeActivity {
-
-              private static final String WEBSITE_URL =
-                      "https://flexisystems2000.github.io/F.E.CAdminpanel/";
-
-              private static final String OFFLINE_URL =
-                      "file:///android_asset/public/offline.html";
-
-              private ConnectivityManager connectivityManager;
-              private ConnectivityManager.NetworkCallback networkCallback;
-
-              private boolean offlinePageShowing = false;
-              private boolean checkingConnection = false;
-
-              private final Handler handler =
-                      new Handler(Looper.getMainLooper());
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
-                  setupStatusBar();
 
                   WebView webView = getBridge().getWebView();
 
                   if (webView != null) {
                       webView.getSettings().setJavaScriptEnabled(true);
                       webView.getSettings().setDomStorageEnabled(true);
-
-                      checkWebsiteConnection(webView);
-                  }
-
-                  registerNetworkListener();
-              }
-
-              private void setupStatusBar() {
-                  Window window = getWindow();
-
-                  window.setStatusBarColor(Color.WHITE);
-
-                  window.getDecorView().setSystemUiVisibility(
-                          View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                  );
-              }
-
-              private void checkWebsiteConnection(WebView webView) {
-
-                  if (checkingConnection) {
-                      return;
-                  }
-
-                  checkingConnection = true;
-
-                  new Thread(() -> {
-
-                      boolean connected = false;
-                      HttpURLConnection connection = null;
-
-                      try {
-                          URL url = new URL(WEBSITE_URL);
-
-                          connection =
-                                  (HttpURLConnection) url.openConnection();
-
-                          connection.setRequestMethod("GET");
-                          connection.setConnectTimeout(5000);
-                          connection.setReadTimeout(5000);
-                          connection.setInstanceFollowRedirects(true);
-
-                          int responseCode =
-                                  connection.getResponseCode();
-
-                          connected =
-                                  responseCode >= 200 &&
-                                  responseCode < 400;
-
-                      } catch (Exception ignored) {
-                          connected = false;
-
-                      } finally {
-                          if (connection != null) {
-                              connection.disconnect();
-                          }
-                      }
-
-                      final boolean finalConnected = connected;
-
-                      handler.post(() -> {
-
-                          checkingConnection = false;
-
-                          if (finalConnected) {
-
-                              if (offlinePageShowing) {
-                                  offlinePageShowing = false;
-                                  webView.loadUrl(WEBSITE_URL);
-                              }
-
-                          } else {
-
-                              if (!offlinePageShowing) {
-                                  offlinePageShowing = true;
-                                  webView.loadUrl(OFFLINE_URL);
-                              }
-                          }
-                      });
-
-                  }).start();
-              }
-
-              private void registerNetworkListener() {
-
-                  connectivityManager =
-                          (ConnectivityManager)
-                          getSystemService(CONNECTIVITY_SERVICE);
-
-                  if (connectivityManager == null) {
-                      return;
-                  }
-
-                  networkCallback =
-                          new ConnectivityManager.NetworkCallback() {
-
-                      @Override
-                      public void onLost(Network network) {
-
-                          runOnUiThread(() -> {
-
-                              WebView webView =
-                                      getBridge().getWebView();
-
-                              if (webView != null) {
-                                  offlinePageShowing = true;
-                                  webView.loadUrl(OFFLINE_URL);
-                              }
-                          });
-                      }
-
-                      @Override
-                      public void onAvailable(Network network) {
-
-                          WebView webView =
-                                  getBridge().getWebView();
-
-                          if (webView != null) {
-
-                              handler.postDelayed(() -> {
-                                  checkWebsiteConnection(webView);
-                              }, 800);
-                          }
-                      }
-                  };
-
-                  connectivityManager.registerDefaultNetworkCallback(
-                          networkCallback
-                  );
-              }
-
-              @Override
-              public void onResume() {
-
-                  super.onResume();
-
-                  setupStatusBar();
-
-                  WebView webView =
-                          getBridge().getWebView();
-
-                  if (webView != null) {
-                      checkWebsiteConnection(webView);
                   }
               }
 
               @Override
               public void onBackPressed() {
 
-                  WebView webView =
-                          getBridge().getWebView();
+                  WebView webView = getBridge().getWebView();
 
-                  if (webView != null &&
-                      webView.canGoBack()) {
-
+                  if (webView != null && webView.canGoBack()) {
                       webView.goBack();
-
                   } else {
-
                       finish();
                   }
               }
-
-              @Override
-              public void onDestroy() {
-
-                  if (connectivityManager != null &&
-                      networkCallback != null) {
-
-                      try {
-                          connectivityManager.unregisterNetworkCallback(
-                                  networkCallback
-                          );
-                      } catch (Exception ignored) {
-                      }
-                  }
-
-                  super.onDestroy();
-              }
           }
           EOF
-          
-      - name: Copy offline page into Android assets
-        run: |
-          mkdir -p android/app/src/main/assets/public
-          cp www/offline.html android/app/src/main/assets/public/offline.html
-          
+
+      # 8. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
+      # 9. Make Gradle executable
       - name: Make Gradle executable
         run: chmod +x android/gradlew
 
+      # 10. Build APK
       - name: Build Debug APK
         working-directory: android
         run: ./gradlew assembleDebug
 
+      # 11. Upload APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
