@@ -22,11 +22,16 @@ const config: CapacitorConfig = {
       androidSpinnerStyle: 'large',
       splashFullScreen: true,
       splashImmersive: true
+    },
+
+    StatusBar: {
+      backgroundColor: '#FFFFFF',
+      style: 'LIGHT'
     }
   },
 
   android: {
-    backgroundColor: '#075E54'
+    backgroundColor: '#FFFFFF'
   }
 };
 
