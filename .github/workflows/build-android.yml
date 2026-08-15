@@ -32,7 +32,7 @@ jobs:
         run: npx cap sync android
             
       
-      - name: Configure Android back button
+      - name: Configure Android MainActivity
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -41,28 +41,128 @@ jobs:
 
           path.parent.mkdir(parents=True, exist_ok=True)
 
-          path.write_text("""package com.flexisystems.fecadmin;
+          path.write_text(r'''package com.flexisystems.fecadmin;
 
+          import android.app.AlertDialog;
           import android.os.Bundle;
+          import android.os.Handler;
+          import android.os.Looper;
           import android.webkit.WebView;
 
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
 
+              private static final String WEBSITE_URL =
+                      "https://flexisystems2000.github.io/F.E.CAdminpanel/";
+
+              private static final String OFFLINE_URL =
+                      "file:///android_asset/public/offline.html";
+
+              private boolean showingOffline = false;
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  WebView webView = getBridge().getWebView();
+
+                  if (webView != null) {
+
+                      webView.getSettings().setJavaScriptEnabled(true);
+                      webView.getSettings().setDomStorageEnabled(true);
+
+                      checkInternetAndLoad(webView);
+                  }
+              }
+
+              private void checkInternetAndLoad(WebView webView) {
+
+                  new Thread(() -> {
+
+                      boolean connected = false;
+
+                      try {
+                          java.net.URL url =
+                                  new java.net.URL(WEBSITE_URL);
+
+                          java.net.HttpURLConnection connection =
+                                  (java.net.HttpURLConnection) url.openConnection();
+
+                          connection.setRequestMethod("HEAD");
+                          connection.setConnectTimeout(5000);
+                          connection.setReadTimeout(5000);
+                          connection.setInstanceFollowRedirects(true);
+
+                          int responseCode =
+                                  connection.getResponseCode();
+
+                          connected =
+                                  responseCode >= 200 &&
+                                  responseCode < 400;
+
+                          connection.disconnect();
+
+                      } catch (Exception ignored) {
+                          connected = false;
+                      }
+
+                      final boolean finalConnected = connected;
+
+                      new Handler(Looper.getMainLooper()).post(() -> {
+
+                          if (finalConnected) {
+
+                              showingOffline = false;
+
+                              webView.loadUrl(WEBSITE_URL);
+
+                          } else {
+
+                              showingOffline = true;
+
+                              webView.loadUrl(OFFLINE_URL);
+                          }
+                      });
+
+                  }).start();
+              }
+
+              public void retryConnection() {
+
+                  WebView webView = getBridge().getWebView();
+
+                  if (webView == null) {
+                      return;
+                  }
+
+                  checkInternetAndLoad(webView);
+              }
+
               @Override
               public void onBackPressed() {
+
                   WebView webView = getBridge().getWebView();
 
                   if (webView != null && webView.canGoBack()) {
+
                       webView.goBack();
+
                   } else {
+
                       finish();
                   }
               }
           }
-          """)
+          ''')
+
           PY
+
+      - name: Copy offline page into Android assets
+        run: |
+          mkdir -p android/app/src/main/assets/public
+          cp www/offline.html android/app/src/main/assets/public/offline.html
+          
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
