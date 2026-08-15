@@ -33,14 +33,10 @@ jobs:
             
       - name: Configure Android MainActivity
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          mkdir -p android/app/src/main/java/com/flexisystems/fecadmin
 
-          path = Path("android/app/src/main/java/com/flexisystems/fecadmin/MainActivity.java")
-
-          path.parent.mkdir(parents=True, exist_ok=True)
-
-          path.write_text(r'''package com.flexisystems.fecadmin;
+          cat > android/app/src/main/java/com/flexisystems/fecadmin/MainActivity.java <<'EOF'
+          package com.flexisystems.fecadmin;
 
           import android.graphics.Color;
           import android.net.ConnectivityManager;
@@ -74,7 +70,6 @@ jobs:
               private final Handler handler =
                       new Handler(Looper.getMainLooper());
 
-
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -93,9 +88,7 @@ jobs:
                   registerNetworkListener();
               }
 
-
               private void setupStatusBar() {
-
                   Window window = getWindow();
 
                   window.setStatusBarColor(Color.WHITE);
@@ -104,7 +97,6 @@ jobs:
                           View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
                   );
               }
-
 
               private void checkWebsiteConnection(WebView webView) {
 
@@ -117,17 +109,15 @@ jobs:
                   new Thread(() -> {
 
                       boolean connected = false;
-
                       HttpURLConnection connection = null;
 
                       try {
-
                           URL url = new URL(WEBSITE_URL);
 
                           connection =
                                   (HttpURLConnection) url.openConnection();
 
-                          connection.setRequestMethod("HEAD");
+                          connection.setRequestMethod("GET");
                           connection.setConnectTimeout(5000);
                           connection.setReadTimeout(5000);
                           connection.setInstanceFollowRedirects(true);
@@ -140,11 +130,9 @@ jobs:
                                   responseCode < 400;
 
                       } catch (Exception ignored) {
-
                           connected = false;
 
                       } finally {
-
                           if (connection != null) {
                               connection.disconnect();
                           }
@@ -175,7 +163,6 @@ jobs:
                   }).start();
               }
 
-
               private void registerNetworkListener() {
 
                   connectivityManager =
@@ -198,14 +185,11 @@ jobs:
                                       getBridge().getWebView();
 
                               if (webView != null) {
-
                                   offlinePageShowing = true;
-
                                   webView.loadUrl(OFFLINE_URL);
                               }
                           });
                       }
-
 
                       @Override
                       public void onAvailable(Network network) {
@@ -227,7 +211,6 @@ jobs:
                   );
               }
 
-
               @Override
               public void onResume() {
 
@@ -242,7 +225,6 @@ jobs:
                       checkWebsiteConnection(webView);
                   }
               }
-
 
               @Override
               public void onBackPressed() {
@@ -261,7 +243,6 @@ jobs:
                   }
               }
 
-
               @Override
               public void onDestroy() {
 
@@ -269,11 +250,9 @@ jobs:
                       networkCallback != null) {
 
                       try {
-
                           connectivityManager.unregisterNetworkCallback(
                                   networkCallback
                           );
-
                       } catch (Exception ignored) {
                       }
                   }
@@ -281,10 +260,8 @@ jobs:
                   super.onDestroy();
               }
           }
-          ''')
-
-          PY      
-
+          EOF
+          
       - name: Copy offline page into Android assets
         run: |
           mkdir -p android/app/src/main/assets/public
