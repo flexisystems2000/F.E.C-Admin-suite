@@ -31,7 +31,6 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
             
-      
       - name: Configure Android MainActivity
         run: |
           python3 - <<'PY'
@@ -95,11 +94,6 @@ jobs:
               }
 
 
-              /*
-               * Force Android status bar to have:
-               * White background
-               * Black/dark icons and text
-               */
               private void setupStatusBar() {
 
                   Window window = getWindow();
@@ -112,9 +106,6 @@ jobs:
               }
 
 
-              /*
-               * Check whether GitHub Pages can actually be reached.
-               */
               private void checkWebsiteConnection(WebView webView) {
 
                   if (checkingConnection) {
@@ -137,11 +128,8 @@ jobs:
                                   (HttpURLConnection) url.openConnection();
 
                           connection.setRequestMethod("HEAD");
-
                           connection.setConnectTimeout(5000);
-
                           connection.setReadTimeout(5000);
-
                           connection.setInstanceFollowRedirects(true);
 
                           int responseCode =
@@ -171,18 +159,14 @@ jobs:
                           if (finalConnected) {
 
                               if (offlinePageShowing) {
-
                                   offlinePageShowing = false;
-
                                   webView.loadUrl(WEBSITE_URL);
                               }
 
                           } else {
 
                               if (!offlinePageShowing) {
-
                                   offlinePageShowing = true;
-
                                   webView.loadUrl(OFFLINE_URL);
                               }
                           }
@@ -192,9 +176,6 @@ jobs:
               }
 
 
-              /*
-               * Continuously monitor the phone's network.
-               */
               private void registerNetworkListener() {
 
                   connectivityManager =
@@ -235,14 +216,11 @@ jobs:
                           if (webView != null) {
 
                               handler.postDelayed(() -> {
-
                                   checkWebsiteConnection(webView);
-
                               }, 800);
                           }
                       }
                   };
-
 
                   connectivityManager.registerDefaultNetworkCallback(
                           networkCallback
@@ -250,11 +228,8 @@ jobs:
               }
 
 
-              /*
-               * Check again whenever the app returns to the foreground.
-               */
               @Override
-              protected void onResume() {
+              public void onResume() {
 
                   super.onResume();
 
@@ -264,15 +239,11 @@ jobs:
                           getBridge().getWebView();
 
                   if (webView != null) {
-
                       checkWebsiteConnection(webView);
                   }
               }
 
 
-              /*
-               * Android Back button.
-               */
               @Override
               public void onBackPressed() {
 
@@ -291,11 +262,8 @@ jobs:
               }
 
 
-              /*
-               * Clean up network listener.
-               */
               @Override
-              protected void onDestroy() {
+              public void onDestroy() {
 
                   if (connectivityManager != null &&
                       networkCallback != null) {
@@ -315,7 +283,7 @@ jobs:
           }
           ''')
 
-          PY
+          PY      
 
       - name: Copy offline page into Android assets
         run: |
