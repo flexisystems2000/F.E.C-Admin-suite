@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "mkdir -p www && cp offline.html www/index.html"
+  "build": "echo \"No build step needed – using remote Admin Panel\""
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
