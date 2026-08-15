@@ -43,13 +43,20 @@ jobs:
 
           path.write_text(r'''package com.flexisystems.fecadmin;
 
-          import android.app.AlertDialog;
+          import android.graphics.Color;
+          import android.net.ConnectivityManager;
+          import android.net.Network;
           import android.os.Bundle;
           import android.os.Handler;
           import android.os.Looper;
+          import android.view.View;
+          import android.view.Window;
           import android.webkit.WebView;
 
           import com.getcapacitor.BridgeActivity;
+
+          import java.net.HttpURLConnection;
+          import java.net.URL;
 
           public class MainActivity extends BridgeActivity {
 
@@ -59,39 +66,82 @@ jobs:
               private static final String OFFLINE_URL =
                       "file:///android_asset/public/offline.html";
 
-              private boolean showingOffline = false;
+              private ConnectivityManager connectivityManager;
+              private ConnectivityManager.NetworkCallback networkCallback;
+
+              private boolean offlinePageShowing = false;
+              private boolean checkingConnection = false;
+
+              private final Handler handler =
+                      new Handler(Looper.getMainLooper());
+
 
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
+                  setupStatusBar();
+
                   WebView webView = getBridge().getWebView();
 
                   if (webView != null) {
-
                       webView.getSettings().setJavaScriptEnabled(true);
                       webView.getSettings().setDomStorageEnabled(true);
 
-                      checkInternetAndLoad(webView);
+                      checkWebsiteConnection(webView);
                   }
+
+                  registerNetworkListener();
               }
 
-              private void checkInternetAndLoad(WebView webView) {
+
+              /*
+               * Force Android status bar to have:
+               * White background
+               * Black/dark icons and text
+               */
+              private void setupStatusBar() {
+
+                  Window window = getWindow();
+
+                  window.setStatusBarColor(Color.WHITE);
+
+                  window.getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                  );
+              }
+
+
+              /*
+               * Check whether GitHub Pages can actually be reached.
+               */
+              private void checkWebsiteConnection(WebView webView) {
+
+                  if (checkingConnection) {
+                      return;
+                  }
+
+                  checkingConnection = true;
 
                   new Thread(() -> {
 
                       boolean connected = false;
 
-                      try {
-                          java.net.URL url =
-                                  new java.net.URL(WEBSITE_URL);
+                      HttpURLConnection connection = null;
 
-                          java.net.HttpURLConnection connection =
-                                  (java.net.HttpURLConnection) url.openConnection();
+                      try {
+
+                          URL url = new URL(WEBSITE_URL);
+
+                          connection =
+                                  (HttpURLConnection) url.openConnection();
 
                           connection.setRequestMethod("HEAD");
+
                           connection.setConnectTimeout(5000);
+
                           connection.setReadTimeout(5000);
+
                           connection.setInstanceFollowRedirects(true);
 
                           int responseCode =
@@ -101,50 +151,136 @@ jobs:
                                   responseCode >= 200 &&
                                   responseCode < 400;
 
-                          connection.disconnect();
-
                       } catch (Exception ignored) {
+
                           connected = false;
+
+                      } finally {
+
+                          if (connection != null) {
+                              connection.disconnect();
+                          }
                       }
 
                       final boolean finalConnected = connected;
 
-                      new Handler(Looper.getMainLooper()).post(() -> {
+                      handler.post(() -> {
+
+                          checkingConnection = false;
 
                           if (finalConnected) {
 
-                              showingOffline = false;
+                              if (offlinePageShowing) {
 
-                              webView.loadUrl(WEBSITE_URL);
+                                  offlinePageShowing = false;
+
+                                  webView.loadUrl(WEBSITE_URL);
+                              }
 
                           } else {
 
-                              showingOffline = true;
+                              if (!offlinePageShowing) {
 
-                              webView.loadUrl(OFFLINE_URL);
+                                  offlinePageShowing = true;
+
+                                  webView.loadUrl(OFFLINE_URL);
+                              }
                           }
                       });
 
                   }).start();
               }
 
-              public void retryConnection() {
 
-                  WebView webView = getBridge().getWebView();
+              /*
+               * Continuously monitor the phone's network.
+               */
+              private void registerNetworkListener() {
 
-                  if (webView == null) {
+                  connectivityManager =
+                          (ConnectivityManager)
+                          getSystemService(CONNECTIVITY_SERVICE);
+
+                  if (connectivityManager == null) {
                       return;
                   }
 
-                  checkInternetAndLoad(webView);
+                  networkCallback =
+                          new ConnectivityManager.NetworkCallback() {
+
+                      @Override
+                      public void onLost(Network network) {
+
+                          runOnUiThread(() -> {
+
+                              WebView webView =
+                                      getBridge().getWebView();
+
+                              if (webView != null) {
+
+                                  offlinePageShowing = true;
+
+                                  webView.loadUrl(OFFLINE_URL);
+                              }
+                          });
+                      }
+
+
+                      @Override
+                      public void onAvailable(Network network) {
+
+                          WebView webView =
+                                  getBridge().getWebView();
+
+                          if (webView != null) {
+
+                              handler.postDelayed(() -> {
+
+                                  checkWebsiteConnection(webView);
+
+                              }, 800);
+                          }
+                      }
+                  };
+
+
+                  connectivityManager.registerDefaultNetworkCallback(
+                          networkCallback
+                  );
               }
 
+
+              /*
+               * Check again whenever the app returns to the foreground.
+               */
+              @Override
+              protected void onResume() {
+
+                  super.onResume();
+
+                  setupStatusBar();
+
+                  WebView webView =
+                          getBridge().getWebView();
+
+                  if (webView != null) {
+
+                      checkWebsiteConnection(webView);
+                  }
+              }
+
+
+              /*
+               * Android Back button.
+               */
               @Override
               public void onBackPressed() {
 
-                  WebView webView = getBridge().getWebView();
+                  WebView webView =
+                          getBridge().getWebView();
 
-                  if (webView != null && webView.canGoBack()) {
+                  if (webView != null &&
+                      webView.canGoBack()) {
 
                       webView.goBack();
 
@@ -152,6 +288,29 @@ jobs:
 
                       finish();
                   }
+              }
+
+
+              /*
+               * Clean up network listener.
+               */
+              @Override
+              protected void onDestroy() {
+
+                  if (connectivityManager != null &&
+                      networkCallback != null) {
+
+                      try {
+
+                          connectivityManager.unregisterNetworkCallback(
+                                  networkCallback
+                          );
+
+                      } catch (Exception ignored) {
+                      }
+                  }
+
+                  super.onDestroy();
               }
           }
           ''')
