@@ -31,7 +31,8 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
             
-      - name: Configure Android WebView
+      
+      - name: Configure Android back button
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -40,77 +41,17 @@ jobs:
 
           path.parent.mkdir(parents=True, exist_ok=True)
 
-          path.write_text(r'''package com.flexisystems.fecadmin;
+          path.write_text("""package com.flexisystems.fecadmin;
 
           import android.os.Bundle;
-          import android.webkit.WebResourceError;
-          import android.webkit.WebResourceRequest;
-          import android.webkit.WebResourceResponse;
           import android.webkit.WebView;
-          import android.webkit.WebViewClient;
 
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
 
-              private static final String WEBSITE_URL =
-                      "https://flexisystems2000.github.io/F.E.CAdminpanel/";
-
-              private static final String OFFLINE_URL =
-                      "file:///android_asset/public/offline.html";
-
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-
-                  WebView webView = getBridge().getWebView();
-
-                  if (webView != null) {
-
-                      webView.getSettings().setJavaScriptEnabled(true);
-                      webView.getSettings().setDomStorageEnabled(true);
-
-                      webView.setWebViewClient(new WebViewClient() {
-
-                          @Override
-                          public boolean shouldOverrideUrlLoading(
-                                  WebView view,
-                                  WebResourceRequest request) {
-
-                              view.loadUrl(request.getUrl().toString());
-                              return true;
-                          }
-
-                          @Override
-                          public void onReceivedError(
-                                  WebView view,
-                                  WebResourceRequest request,
-                                  WebResourceError error) {
-
-                              if (request.isForMainFrame()) {
-                                  view.loadUrl(OFFLINE_URL);
-                              }
-                          }
-
-                          @Override
-                          public void onReceivedHttpError(
-                                  WebView view,
-                                  WebResourceRequest request,
-                                  WebResourceResponse response) {
-
-                              if (request.isForMainFrame()
-                                      && response.getStatusCode() >= 400) {
-
-                                  view.loadUrl(OFFLINE_URL);
-                              }
-                          }
-                      });
-                  }
-              }
-
               @Override
               public void onBackPressed() {
-
                   WebView webView = getBridge().getWebView();
 
                   if (webView != null && webView.canGoBack()) {
@@ -120,15 +61,8 @@ jobs:
                   }
               }
           }
-          ''')
-
+          """)
           PY
-
-      - name: Copy offline page into Android assets
-        run: |
-          mkdir -p android/app/src/main/assets/public
-          cp www/offline.html android/app/src/main/assets/public/offline.html
-          
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
