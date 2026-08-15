@@ -49,6 +49,8 @@ jobs:
           import android.os.Bundle;
           import android.webkit.WebView;
 
+          import androidx.activity.OnBackPressedCallback;
+
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
@@ -63,22 +65,38 @@ jobs:
                       webView.getSettings().setJavaScriptEnabled(true);
                       webView.getSettings().setDomStorageEnabled(true);
                   }
-              }
 
-              @Override
-              public void onBackPressed() {
+                  getOnBackPressedDispatcher().addCallback(
+                          this,
+                          new OnBackPressedCallback(true) {
 
-                  WebView webView = getBridge().getWebView();
+                              @Override
+                              public void handleOnBackPressed() {
 
-                  if (webView != null && webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      finish();
-                  }
+                                  WebView currentWebView =
+                                          getBridge().getWebView();
+
+                                  if (currentWebView != null &&
+                                      currentWebView.canGoBack()) {
+
+                                      currentWebView.goBack();
+
+                                  } else {
+
+                                      setEnabled(false);
+
+                                      getOnBackPressedDispatcher()
+                                              .onBackPressed();
+
+                                      setEnabled(true);
+                                  }
+                              }
+                          }
+                  );
               }
           }
           EOF
-
+          
       # 8. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
